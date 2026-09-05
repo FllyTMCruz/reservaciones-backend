@@ -1,20 +1,20 @@
-# Sistema de Reservaciones - Frontend (Cliente)
+# Sistema de Reservaciones - Backend (API RESTful)
 
-Interfaz de usuario tipo Single Page Application (SPA) para el Sistema de Reservaciones. Este módulo garantiza una experiencia fluida sin recargas de página y un diseño adaptable a dispositivos móviles (Responsive Web Design).
+Núcleo lógico y de alto rendimiento del Sistema de Reservaciones. Procesa las operaciones CRUD, valida datos estrictamente y maneja la concurrencia de múltiples usuarios[cite: 2]. La arquitectura está preparada para contenedorización con Docker[cite: 2].
 
 ## 🚀 Características
-* **Calendario Interactivo:** Integración gráfica de fechas y horarios mediante FullCalendar[cite: 2].
-* **Navegación por Roles:** Paneles dedicados para administradores y usuarios con protección de rutas.
-* **Diseño Responsive:** Maquetación adaptable desarrollada por Dev1 (Interfaz y Diseño)[cite: 1].
+* **Gestión de Citas (CRUD):** Lógica principal y manejo de espacios de tiempo, a cargo de Dev2[cite: 1].
+* **Validación Estricta:** Modelado de datos (fechas, IDs, textos) mediante Pydantic antes de la inserción en base de datos[cite: 2].
+* **Seguridad y Persistencia:** Autenticación por tokens JWT y persistencia en Supabase (PostgreSQL) gestionados por Dev3[cite: 1, 2].
 
 ## 🛠️ Stack Tecnológico
-* **Framework:** Angular[cite: 2].
-* **Lenguaje:** TypeScript (tipado estricto)[cite: 2].
-* **Componentes Visuales:** FullCalendar[cite: 2].
-* **Despliegue:** Vercel / Netlify[cite: 2].
+* **Framework:** FastAPI[cite: 2].
+* **Lenguaje:** Python[cite: 2].
+* **Base de Datos & Auth:** Supabase (PostgreSQL + JWT Auth)[cite: 2].
+* **Infraestructura:** Docker y DigitalOcean (Droplet o App Platform)[cite: 2].
 
 ## ⚙️ Desarrollo Local
 1. Clonar el repositorio.
-2. Instalar dependencias con `npm install`.
-3. Configurar las variables en `src/app/environment.ts` con la URL de la API de FastAPI.
-4. Ejecutar el servidor de desarrollo con `ng serve`.
+2. Crear un entorno virtual e instalar las dependencias con `pip install -r requirements.txt`.
+3. Configurar variables de entorno para la conexión con Supabase.
+4. Ejecutar el servidor con `uvicorn app.main:app --reload`.
