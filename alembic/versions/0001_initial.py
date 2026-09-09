@@ -1,8 +1,8 @@
-"""Initial migration: create espacio and evento_reservacion tables; create usuario via raw SQL
+﻿"""Initial migration: create espacio and evento_reservacion tables; create usuario via raw SQL
 
 Revision ID: 0001_initial
 Revises: 
-Create Date: 2026-09-09 16:30:00.000000
+Create Date: 2026-09-09 16:35:00.000000
 """
 from alembic import op
 import sqlalchemy as sa
@@ -24,9 +24,12 @@ def upgrade():
         sa.Column('capacidad_maxima', sa.Integer(), nullable=False),
     )
 
-    # Create enums used by evento_reservacion
+    # Create enums used by evento_reservacion and rol for usuario
     estado_enum = postgresql.ENUM('Pendiente', 'Confirmado', 'Cancelado', name='estado_evento_enum')
     estado_enum.create(op.get_bind(), checkfirst=True)
+
+    rol_enum = postgresql.ENUM('Cliente', 'Coordinador', 'Administración', name='rol_usuario_enum')
+    rol_enum.create(op.get_bind(), checkfirst=True)
 
     # Create evento_reservacion table
     op.create_table(
@@ -38,29 +41,34 @@ def upgrade():
         sa.Column('fecha_fin', sa.DateTime(), nullable=False),
         sa.Column('tipo_evento', sa.String(length=100), nullable=False),
         sa.Column('invitados_estimados', sa.Integer(), nullable=False),
-        sa.Column('estado_evento', sa.Enum(name='estado_evento_enum'), nullable=False),
+        sa.Column('estado_evento', sa.Enum('Pendiente', 'Confirmado', 'Cancelado', name='estado_evento_enum'), nullable=False),
         sa.ForeignKeyConstraint(['id_espacio'], ['espacio.id_espacio'], ondelete='CASCADE')
     )
 
-    # Create usuario table via raw SQL to reference auth.users(id)
+    # Create usuario table via raw SQL to reference auth.users(id) and use rol enum
     op.execute('''
-        CREATE TABLE IF NOT EXISTS usuario (
-            id_usuario UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-            nombre TEXT NOT NULL,
-            correo TEXT NOT NULL UNIQUE,
-            rol TEXT NOT NULL
-        );
-    ''')
+CREATE TABLE IF NOT EXISTS usuario (
+    id_usuario UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    nombre TEXT NOT NULL,
+    correo TEXT NOT NULL UNIQUE,
+    rol rol_usuario_enum NOT NULL
+);
+''')
 
 
 def downgrade():
     # Drop usuario table created via raw SQL
     op.execute('DROP TABLE IF EXISTS usuario;')
 
-    # Drop evento_reservacion and estado enum
+    # Drop evento_reservacion table
     op.drop_table('evento_reservacion')
+
+    # Drop enums
     estado_enum = postgresql.ENUM('Pendiente', 'Confirmado', 'Cancelado', name='estado_evento_enum')
     estado_enum.drop(op.get_bind(), checkfirst=True)
+
+    rol_enum = postgresql.ENUM('Cliente', 'Coordinador', 'Administración', name='rol_usuario_enum')
+    rol_enum.drop(op.get_bind(), checkfirst=True)
 
     # Drop espacio table
     op.drop_table('espacio')
