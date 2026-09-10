@@ -3,6 +3,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.routers import espacios, eventos, usuarios
+
 app = FastAPI(
     title="Sistema de Reservaciones API",
     description="API RESTful para la gestión de espacios y reservas.",
@@ -16,6 +18,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(espacios.router)
+app.include_router(eventos.router)
+app.include_router(usuarios.router)
 
 
 @app.get("/health", tags=["health"])
