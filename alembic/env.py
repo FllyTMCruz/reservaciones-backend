@@ -4,8 +4,9 @@ Reads DATABASE_URL from the environment; imports application metadata so autogen
 can detect model tables. This env.py is intentionally simple and uses SQLAlchemy
 Connection objects.
 """
-import os
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
@@ -25,6 +26,8 @@ if config.config_file_name is not None:
 # target_metadata = mymodel.Base.metadata
 
 # Import application metadata
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from app.core.config import settings  # noqa: E402
 from app.db.base import Base as AppBase  # noqa: E402
 import app.models.usuario  # noqa: F401, E402
 import app.models.espacio  # noqa: F401, E402
@@ -32,12 +35,7 @@ import app.models.evento_reservacion  # noqa: F401, E402
 
 target_metadata = AppBase.metadata
 
-# Read DB URL from environment
-database_url = os.environ.get("DATABASE_URL")
-if not database_url:
-    raise RuntimeError("DATABASE_URL environment variable is not set; Alembic needs it to run migrations")
-
-config.set_main_option("sqlalchemy.url", database_url)
+config.set_main_option("sqlalchemy.url", settings.database_url)
 
 
 def run_migrations_offline():
