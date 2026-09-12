@@ -7,9 +7,9 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import get_current_user_id, require_role
+from app.auth.dependencies import get_current_user, get_current_user_id, require_role
 from app.db.session import get_db
-from app.models.evento_reservacion import EventoReservacion
+from app.models.evento_reservacion import EstadoEventoEnum, EventoReservacion
 from app.models.usuario import RolUsuarioEnum
 from app.schemas.evento_reservacion import (
     EventoReservacionCambiarEstado,
@@ -32,6 +32,11 @@ def _obtener_o_404(db: Session, id_evento: int) -> EventoReservacion:
     return evento
 
 
+def _es_rol_de_gestion(payload: dict) -> bool:
+    rol_valor = payload.get("user_metadata", {}).get("rol")
+    return rol_valor in (RolUsuarioEnum.COORDINADOR.value, RolUsuarioEnum.ADMINISTRACION.value)
+
+
 @router.get("/", response_model=list[EventoReservacionRead])
 def listar_eventos(
     db: Annotated[Session, Depends(get_db)],
@@ -49,8 +54,25 @@ def listar_eventos(
 
 
 @router.get("/{id_evento}", response_model=EventoReservacionRead)
-def obtener_evento(id_evento: int, db: Annotated[Session, Depends(get_db)]):
-    return _obtener_o_404(db, id_evento)
+def obtener_evento(
+    id_evento: int,
+    db: Annotated[Session, Depends(get_db)],
+    payload: Annotated[dict, Depends(get_current_user)],
+):
+    """Obtiene el detalle de un evento.
+
+    Requiere estar autenticado. Solo puede verlo el dueño de la
+    reservación o alguien con rol de gestión (Coordinador/Administración);
+    antes este endpoint era público y exponía datos de cualquier
+    reservación a cualquiera que adivinara el id.
+    """
+    evento = _obtener_o_404(db, id_evento)
+    id_usuario_actual = UUID(payload["sub"])
+    if evento.id_usuario != id_usuario_actual and not _es_rol_de_gestion(payload):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN, "No puedes ver una reservación que no es tuya"
+        )
+    return evento
 
 
 @router.post("/", response_model=EventoReservacionRead, status_code=status.HTTP_201_CREATED)
@@ -95,6 +117,13 @@ def actualizar_evento(
 
     for campo, valor in data.model_dump(exclude_unset=True).items():
         setattr(evento, campo, valor)
+
+    # Si el dueño edita una reservación que ya estaba Confirmada, vuelve a
+    # Pendiente: el Coordinador/Administración confirmó los datos previos,
+    # no los nuevos, así que debe revisarla otra vez antes de que cuente
+    # como confirmada.
+    if evento.estado_evento == EstadoEventoEnum.CONFIRMADO:
+        evento.estado_evento = EstadoEventoEnum.PENDIENTE
 
     try:
         db.commit()

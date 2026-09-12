@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.auth.dependencies import require_role
+from app.auth.dependencies import get_current_user_id, require_role
 from app.db.session import get_db
 from app.models.espacio import Espacio
 from app.models.usuario import RolUsuarioEnum
@@ -21,14 +21,21 @@ SoloGestion = Depends(
 
 
 @router.get("/", response_model=list[EspacioRead])
-def listar_espacios(db: Annotated[Session, Depends(get_db)]):
-    """Lista todos los espacios disponibles para reservar."""
+def listar_espacios(
+    db: Annotated[Session, Depends(get_db)],
+    _id_usuario: Annotated[object, Depends(get_current_user_id)],
+):
+    """Lista todos los espacios disponibles para reservar (requiere sesión)."""
     return db.query(Espacio).all()
 
 
 @router.get("/{id_espacio}", response_model=EspacioRead)
-def obtener_espacio(id_espacio: int, db: Annotated[Session, Depends(get_db)]):
-    """Obtiene el detalle de un espacio por su id."""
+def obtener_espacio(
+    id_espacio: int,
+    db: Annotated[Session, Depends(get_db)],
+    _id_usuario: Annotated[object, Depends(get_current_user_id)],
+):
+    """Obtiene el detalle de un espacio por su id (requiere sesión)."""
     espacio = db.get(Espacio, id_espacio)
     if espacio is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Espacio no encontrado")

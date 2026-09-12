@@ -3,6 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.core.config import settings
 from app.routers import espacios, eventos, usuarios
 
 app = FastAPI(
@@ -11,10 +12,16 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Los orígenes permitidos salen de CORS_ORIGINS (ver app/core/config.py).
+# No usamos allow_origins=["*"] porque, combinado con allow_credentials=True,
+# es una configuración que el propio spec de CORS desaconseja y que además
+# dejaría la API abierta a cualquier dominio en producción. La autenticación
+# es por header Authorization (Bearer), no por cookies, así que no
+# necesitamos allow_credentials=True.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=settings.cors_origins_list,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
