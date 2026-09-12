@@ -106,7 +106,7 @@ def crear_evento(
     evento = EventoReservacion(
         **data.model_dump(),
         id_usuario=id_usuario,
-        estado_evento=EstadoEventoEnum.pendiente,
+        estado_evento=EstadoEventoEnum.Pendiente,  # <--- Con P mayúscula,
     )
     db.add(evento)
     try:
