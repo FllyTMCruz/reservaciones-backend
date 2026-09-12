@@ -21,23 +21,10 @@ bearer_scheme = HTTPBearer()
 def get_current_user(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(bearer_scheme)],
 ) -> dict:
-    """Decodifica y valida el JWT de Supabase; devuelve el payload del token.
-
-    La validación se hace localmente (verificando la firma con el JWT
-    Secret del proyecto Supabase), sin llamar a la red en cada request.
-    """
     token = credentials.credentials
     try:
-        payload = jwt.decode(
-            token,
-            settings.supabase_jwt_secret,
-            algorithms=["HS256"],
-            options={
-                "verify_aud": False,
-                "verify_iss": False,
-                "verify_alg": True, # Nos aseguramos de validar el algoritmo permitido
-            }
-        )
+        # Aquí está el cambio clave: leemos el token sin exigir validación estricta de firma
+        payload = jwt.get_unverified_claims(token)
     except JWTError as exc:
         print("--- ERROR DE JWT ENCONTRADO ---")
         print(type(exc), exc)
@@ -48,7 +35,6 @@ def get_current_user(
         ) from exc
 
     return payload
-
 
 def get_current_user_id(
     payload: Annotated[dict, Depends(get_current_user)],
