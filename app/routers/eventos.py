@@ -106,7 +106,7 @@ def crear_evento(
     evento = EventoReservacion(
         **data.model_dump(),
         id_usuario=id_usuario,
-        estado_evento=EstadoEventoEnum.PENDIENTE,
+        estado_evento=EstadoEventoEnum.pendiente,
     )
     db.add(evento)
     try:
