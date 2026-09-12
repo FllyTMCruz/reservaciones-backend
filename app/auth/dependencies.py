@@ -35,9 +35,11 @@ def get_current_user(
             options={"verify_aud": False, "verify_iss": False},
         )
     except JWTError as exc:
+        print("--- ERROR DE JWT ENCONTRADO ---")
+        print(type(exc), exc) # <--- Esto nos va a imprimir el detalle exacto en Render
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token inválido o expirado",
+            detail=f"Token inválido o expirado: {str(exc)}", # Opcional: mostrarlo temporalmente
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
