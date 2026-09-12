@@ -32,14 +32,18 @@ def get_current_user(
             token,
             settings.supabase_jwt_secret,
             algorithms=["HS256"],
-            options={"verify_aud": False, "verify_iss": False},
+            options={
+                "verify_aud": False,
+                "verify_iss": False,
+                "verify_alg": True, # Nos aseguramos de validar el algoritmo permitido
+            }
         )
     except JWTError as exc:
         print("--- ERROR DE JWT ENCONTRADO ---")
-        print(type(exc), exc) # <--- Esto nos va a imprimir el detalle exacto en Render
+        print(type(exc), exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Token inválido o expirado: {str(exc)}", # Opcional: mostrarlo temporalmente
+            detail=f"Token inválido o expirado: {str(exc)}",
             headers={"WWW-Authenticate": "Bearer"},
         ) from exc
 
