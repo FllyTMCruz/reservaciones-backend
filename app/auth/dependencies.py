@@ -32,7 +32,7 @@ def get_current_user(
             token,
             settings.supabase_jwt_secret,
             algorithms=["HS256"],
-            audience="authenticated",
+            options={"verify_aud": False}, # <--- Desactivamos la verificación estricta de aud
         )
     except JWTError as exc:
         raise HTTPException(
