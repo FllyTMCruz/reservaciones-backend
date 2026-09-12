@@ -12,9 +12,9 @@ from app.db.base import Base
 
 
 class EstadoEventoEnum(str, Enum):
-    PENDIENTE = "Pendiente"
-    CONFIRMADO = "Confirmado"
-    CANCELADO = "Cancelado"
+    pendiente = "pendiente"
+    confirmado = "confirmado"
+    cancelado = "cancelado"
 
 
 class EventoReservacion(Base):
