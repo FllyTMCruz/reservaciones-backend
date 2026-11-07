@@ -15,6 +15,9 @@ class EstadoEventoEnum(str, Enum):
     Pendiente = "Pendiente"
     Confirmado = "Confirmado"
     Cancelado = "Cancelado"
+    PENDIENTE = "Pendiente"
+    CONFIRMADO = "Confirmado"
+    CANCELADO = "Cancelado"
 
 
 class EventoReservacion(Base):
@@ -39,7 +42,12 @@ class EventoReservacion(Base):
     tipo_evento: Mapped[str] = mapped_column(String(100), nullable=False)
     invitados_estimados: Mapped[int] = mapped_column(Integer, nullable=False)
     estado_evento: Mapped[EstadoEventoEnum] = mapped_column(
-        SqlEnum(EstadoEventoEnum, name="estado_evento_enum"),
+        SqlEnum(
+            EstadoEventoEnum,
+            name="estado_evento_enum",
+            create_type=False,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
         nullable=False,
     )
 

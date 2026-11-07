@@ -29,7 +29,12 @@ class Usuario(Base):
     nombre: Mapped[str] = mapped_column(String, nullable=False)
     correo: Mapped[str] = mapped_column(String, nullable=False, unique=True)
     rol: Mapped[RolUsuarioEnum] = mapped_column(
-        SqlEnum(RolUsuarioEnum, name="rol_usuario_enum", create_type=False),
+        SqlEnum(
+            RolUsuarioEnum,
+            name="rol_usuario_enum",
+            create_type=False,
+            values_callable=lambda obj: [e.value for e in obj],
+        ),
         nullable=False,
     )
 

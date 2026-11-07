@@ -11,7 +11,7 @@ from app.auth.dependencies import get_current_user, get_current_user_id, require
 from app.db.session import get_db
 from app.models.espacio import Espacio
 from app.models.evento_reservacion import EstadoEventoEnum, EventoReservacion
-from app.models.usuario import RolUsuarioEnum
+from app.models.usuario import RolUsuarioEnum, Usuario
 from app.schemas.evento_reservacion import (
     EventoReservacionCambiarEstado,
     EventoReservacionCreate,
@@ -33,9 +33,18 @@ def _obtener_o_404(db: Session, id_evento: int) -> EventoReservacion:
     return evento
 
 
-def _es_rol_de_gestion(payload: dict) -> bool:
+def _es_rol_de_gestion(db: Session, payload: dict) -> bool:
+    usuario_db = db.get(Usuario, UUID(payload["sub"]))
+    if usuario_db is not None:
+        return usuario_db.rol in (
+            RolUsuarioEnum.COORDINADOR,
+            RolUsuarioEnum.ADMINISTRACION,
+        )
     rol_valor = payload.get("user_metadata", {}).get("rol")
-    return rol_valor in (RolUsuarioEnum.COORDINADOR.value, RolUsuarioEnum.ADMINISTRACION.value)
+    return rol_valor in (
+        RolUsuarioEnum.COORDINADOR.value,
+        RolUsuarioEnum.ADMINISTRACION.value,
+    )
 
 
 def _validar_capacidad(db: Session, id_espacio: int, invitados_estimados: int) -> None:
@@ -88,7 +97,7 @@ def obtener_evento(
     """
     evento = _obtener_o_404(db, id_evento)
     id_usuario_actual = UUID(payload["sub"])
-    if evento.id_usuario != id_usuario_actual and not _es_rol_de_gestion(payload):
+    if evento.id_usuario != id_usuario_actual and not _es_rol_de_gestion(db, payload):
         raise HTTPException(
             status.HTTP_403_FORBIDDEN, "No puedes ver una reservación que no es tuya"
         )
@@ -158,8 +167,8 @@ def actualizar_evento(
     # Pendiente: el Coordinador/Administración confirmó los datos previos,
     # no los nuevos, así que debe revisarla otra vez antes de que cuente
     # como confirmada.
-    if evento.estado_evento == EstadoEventoEnum.CONFIRMADO:
-        evento.estado_evento = EstadoEventoEnum.PENDIENTE
+    if evento.estado_evento == EstadoEventoEnum.Confirmado:
+        evento.estado_evento = EstadoEventoEnum.Pendiente
 
     try:
         db.commit()

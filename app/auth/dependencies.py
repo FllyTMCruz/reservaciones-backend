@@ -11,9 +11,11 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.models.usuario import RolUsuarioEnum
+from app.db.session import get_db
+from app.models.usuario import RolUsuarioEnum, Usuario
 
 bearer_scheme = HTTPBearer()
 
@@ -36,6 +38,7 @@ def get_current_user(
 
     return payload
 
+
 def get_current_user_id(
     payload: Annotated[dict, Depends(get_current_user)],
 ) -> UUID:
@@ -50,22 +53,33 @@ def get_current_user_id(
 def require_role(*roles_permitidos: RolUsuarioEnum):
     """Fábrica de dependencias para restringir un endpoint a ciertos roles.
 
-    El rol del usuario se espera en user_metadata.rol dentro del JWT
-    (configurado al momento del signup/login en Supabase).
+    Consulta primero el rol actual en la tabla `usuario` (para reflejar de
+    inmediato cambios hechos desde el panel de Administración) y usa como
+    respaldo `user_metadata.rol` del JWT (con 'Cliente' por defecto).
 
     Uso:
         @router.post("/", dependencies=[Depends(require_role(RolUsuarioEnum.ADMINISTRACION))])
     """
 
-    def _checker(payload: Annotated[dict, Depends(get_current_user)]) -> dict:
-        rol_valor = payload.get("user_metadata", {}).get("rol")
-        try:
-            rol_usuario = RolUsuarioEnum(rol_valor)
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="El token no tiene un rol válido asignado",
-            ) from exc
+    def _checker(
+        payload: Annotated[dict, Depends(get_current_user)],
+        db: Annotated[Session, Depends(get_db)],
+    ) -> dict:
+        usuario_db = db.get(Usuario, UUID(payload["sub"]))
+        if usuario_db is not None:
+            rol_usuario = usuario_db.rol
+        else:
+            rol_valor = (
+                payload.get("user_metadata", {}).get("rol")
+                or RolUsuarioEnum.CLIENTE.value
+            )
+            try:
+                rol_usuario = RolUsuarioEnum(rol_valor)
+            except ValueError as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="El token no tiene un rol válido asignado",
+                ) from exc
 
         if rol_usuario not in roles_permitidos:
             raise HTTPException(

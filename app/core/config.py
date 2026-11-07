@@ -1,6 +1,6 @@
 """Configuración centralizada de variables de entorno."""
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -26,6 +26,21 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
+
+    @field_validator("database_url")
+    @classmethod
+    def usar_driver_psycopg2(cls, v: str) -> str:
+        """Asegura el uso del driver psycopg2 (definido en requirements.txt).
+
+        En SQLAlchemy 2.1+, el esquema genérico 'postgresql://' intenta usar
+        'psycopg' (v3) por defecto; normalizar a 'postgresql+psycopg2://'
+        garantiza compatibilidad con psycopg2-binary en cualquier entorno.
+        """
+        if v.startswith("postgres://"):
+            return v.replace("postgres://", "postgresql+psycopg2://", 1)
+        if v.startswith("postgresql://"):
+            return v.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return v
 
     @property
     def cors_origins_list(self) -> list[str]:
