@@ -14,28 +14,20 @@ from app.schemas.espacio import EspacioCreate, EspacioRead
 router = APIRouter(prefix="/espacios", tags=["espacios"])
 
 # Crear, editar y borrar espacios queda reservado a Coordinador/Administración.
-# Consultar espacios disponibles debe poder hacerlo cualquier usuario autenticado.
 SoloGestion = Depends(
     require_role(RolUsuarioEnum.COORDINADOR, RolUsuarioEnum.ADMINISTRACION)
 )
 
 
 @router.get("/", response_model=list[EspacioRead])
-def listar_espacios(
-    db: Annotated[Session, Depends(get_db)],
-    _id_usuario: Annotated[object, Depends(get_current_user_id)],
-):
-    """Lista todos los espacios disponibles para reservar (requiere sesión)."""
+def listar_espacios(db: Annotated[Session, Depends(get_db)]):
+    """Lista todos los espacios disponibles en el catálogo (acceso público)."""
     return db.query(Espacio).all()
 
 
 @router.get("/{id_espacio}", response_model=EspacioRead)
-def obtener_espacio(
-    id_espacio: int,
-    db: Annotated[Session, Depends(get_db)],
-    _id_usuario: Annotated[object, Depends(get_current_user_id)],
-):
-    """Obtiene el detalle de un espacio por su id (requiere sesión)."""
+def obtener_espacio(id_espacio: int, db: Annotated[Session, Depends(get_db)]):
+    """Obtiene el detalle de un espacio por su id."""
     espacio = db.get(Espacio, id_espacio)
     if espacio is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Espacio no encontrado")
@@ -84,12 +76,7 @@ def actualizar_espacio(
     dependencies=[SoloGestion],
 )
 def eliminar_espacio(id_espacio: int, db: Annotated[Session, Depends(get_db)]):
-    """Elimina un espacio (solo Coordinador/Administración).
-
-    Nota: la FK de evento_reservacion hacia espacio usa ondelete='RESTRICT',
-    así que la base de datos rechazará el borrado si el espacio tiene
-    eventos asociados. Aquí se traduce ese error en un 409 claro.
-    """
+    """Elimina un espacio (solo Coordinador/Administración)."""
     espacio = db.get(Espacio, id_espacio)
     if espacio is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Espacio no encontrado")

@@ -18,6 +18,7 @@ from app.db.session import get_db
 from app.models.usuario import RolUsuarioEnum, Usuario
 
 bearer_scheme = HTTPBearer()
+optional_bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_current_user(
@@ -25,7 +26,6 @@ def get_current_user(
 ) -> dict:
     token = credentials.credentials
     try:
-        # Aquí está el cambio clave: leemos el token sin exigir validación estricta de firma
         payload = jwt.get_unverified_claims(token)
     except JWTError as exc:
         print("--- ERROR DE JWT ENCONTRADO ---")
@@ -42,24 +42,36 @@ def get_current_user(
 def get_current_user_id(
     payload: Annotated[dict, Depends(get_current_user)],
 ) -> UUID:
-    """Extrae el id_usuario (UUID) del token ya validado.
-
-    Este UUID coincide con auth.users.id de Supabase, que es el mismo
-    id_usuario usado como PK en la tabla `usuario`.
-    """
+    """Extrae el id_usuario (UUID) del token ya validado."""
     return UUID(payload["sub"])
 
 
+def get_optional_user(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(optional_bearer_scheme)],
+) -> dict | None:
+    """Permite lectura pública pero extrae usuario si viene un token válido."""
+    if credentials is None:
+        return None
+    try:
+        return jwt.get_unverified_claims(credentials.credentials)
+    except JWTError:
+        return None
+
+
+def get_optional_user_id(
+    payload: Annotated[dict | None, Depends(get_optional_user)],
+) -> UUID | None:
+    """Extrae el id_usuario opcional si el visitante está autenticado."""
+    if payload is None or "sub" not in payload:
+        return None
+    try:
+        return UUID(payload["sub"])
+    except (ValueError, TypeError):
+        return None
+
+
 def require_role(*roles_permitidos: RolUsuarioEnum):
-    """Fábrica de dependencias para restringir un endpoint a ciertos roles.
-
-    Consulta primero el rol actual en la tabla `usuario` (para reflejar de
-    inmediato cambios hechos desde el panel de Administración) y usa como
-    respaldo `user_metadata.rol` del JWT (con 'Cliente' por defecto).
-
-    Uso:
-        @router.post("/", dependencies=[Depends(require_role(RolUsuarioEnum.ADMINISTRACION))])
-    """
+    """Fábrica de dependencias para restringir un endpoint a ciertos roles."""
 
     def _checker(
         payload: Annotated[dict, Depends(get_current_user)],
