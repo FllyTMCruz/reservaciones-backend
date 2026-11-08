@@ -12,15 +12,16 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# Los orígenes permitidos salen de CORS_ORIGINS (ver app/core/config.py).
-# No usamos allow_origins=["*"] porque, combinado con allow_credentials=True,
-# es una configuración que el propio spec de CORS desaconseja y que además
-# dejaría la API abierta a cualquier dominio en producción. La autenticación
-# es por header Authorization (Bearer), no por cookies, así que no
-# necesitamos allow_credentials=True.
+# Permitimos orígenes locales, dominios de Vercel (*.vercel.app) y wildcard '*',
+# ya que la autenticación es mediante Authorization Bearer (sin cookies).
+origenes = list(settings.cors_origins_list)
+if "*" not in origenes:
+    origenes.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins_list,
+    allow_origins=origenes,
+    allow_origin_regex=r"^https:\/\/.*\.vercel\.app$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
